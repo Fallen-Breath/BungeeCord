@@ -22,7 +22,10 @@ import net.md_5.bungee.api.chat.TextComponent;
 public class ServerPing
 {
 
+    private BaseComponent description;
+    private Players players;
     private Protocol version;
+    private Favicon favicon;
 
     @Data
     @AllArgsConstructor
@@ -32,7 +35,6 @@ public class ServerPing
         private String name;
         private int protocol;
     }
-    private Players players;
 
     @Data
     @AllArgsConstructor
@@ -78,8 +80,6 @@ public class ServerPing
         }
     }
 
-    private BaseComponent description;
-    private Favicon favicon;
 
     @Data
     public static class ModInfo
@@ -100,18 +100,43 @@ public class ServerPing
 
     // Right now, we don't get the mods from the user, so we just use a stock ModInfo object to
     // create the server ping. Vanilla clients will ignore this.
-    private final ModInfo modinfo = new ModInfo();
+    // yeeted!
+    // private final ModInfo modinfo = new ModInfo();
 
     @Deprecated
     public ServerPing(Protocol version, Players players, String description, String favicon)
     {
-        this( version, players, new TextComponent( TextComponent.fromLegacyText( description ) ), favicon == null ? null : Favicon.create( favicon ) );
+        this.description = new TextComponent( TextComponent.fromLegacyText( description ) );
+        this.players = players;
+        this.version = version;
+        this.favicon = favicon == null ? null : Favicon.create( favicon );
     }
 
     @Deprecated
     public ServerPing(Protocol version, Players players, String description, Favicon favicon)
     {
-        this( version, players, new TextComponent( TextComponent.fromLegacyText( description ) ), favicon );
+        this.description = new TextComponent( TextComponent.fromLegacyText( description ) );
+        this.players = players;
+        this.version = version;
+        this.favicon = favicon;
+    }
+
+    @Deprecated
+    public ServerPing(Protocol version, Players players, BaseComponent description, String favicon)
+    {
+        this.description = description;
+        this.players = players;
+        this.version = version;
+        this.favicon = favicon == null ? null : Favicon.create( favicon );
+    }
+
+    @Deprecated
+    public ServerPing(Protocol version, Players players, BaseComponent description, Favicon favicon)
+    {
+        this.description = description;
+        this.players = players;
+        this.version = version;
+        this.favicon = favicon;
     }
 
     @Deprecated
