@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,6 +15,7 @@ import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.ClickEvent;
 import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.hover.content.Content;
 
 public class BaseComponentSerializer
 {
@@ -77,20 +79,39 @@ public class BaseComponentSerializer
                 {
                     continue;
                 }
-                HoverEvent.Content[] list;
                 JsonElement contents = event.get( type );
-                if ( contents.isJsonArray() )
+                try
                 {
-                    list = context.deserialize( contents, HoverEvent.getClass( action, true ) );
-                } else
-                {
-                    list = new HoverEvent.Content[]
-                    {
-                        context.deserialize( contents, HoverEvent.getClass( action, false ) )
-                    };
-                }
 
-                hoverEvent = new HoverEvent( action, new ArrayList<>( Arrays.asList( list ) ) );
+                    // Plugins previously had support to pass BaseComponent[] into any action.
+                    // If the GSON is possible to be parsed as BaseComponent, attempt to parse as so.
+                    BaseComponent[] components;
+                    if ( contents.isJsonArray() )
+                    {
+                        components = context.deserialize( contents, BaseComponent[].class );
+                    } else
+                    {
+                        components = new BaseComponent[]
+                        {
+                                context.deserialize( contents, BaseComponent.class )
+                        };
+                    }
+                    hoverEvent = new HoverEvent( action, components );
+                } catch ( JsonParseException ex )
+                {
+                    Content[] list;
+                    if ( contents.isJsonArray() )
+                    {
+                        list = context.deserialize( contents, HoverEvent.getClass( action, true ) );
+                    } else
+                    {
+                        list = new Content[]
+                        {
+                            context.deserialize( contents, HoverEvent.getClass( action, false ) )
+                        };
+                    }
+                    hoverEvent = new HoverEvent( action, new ArrayList<>( Arrays.asList( list ) ) );
+                }
 
                 // stop the loop as soon as either one is found
                 break;
@@ -169,7 +190,8 @@ public class BaseComponentSerializer
                     hoverEvent.add( "value", context.serialize( component.getHoverEvent().getContents().get( 0 ) ) );
                 } else
                 {
-                    hoverEvent.add( "contents", context.serialize( component.getHoverEvent().getContents() ) );
+                    hoverEvent.add( "contents", context.serialize( ( component.getHoverEvent().getContents().size() == 1 )
+                            ? component.getHoverEvent().getContents().get( 0 ) : component.getHoverEvent().getContents() ) );
                 }
                 object.add( "hoverEvent", hoverEvent );
             }
