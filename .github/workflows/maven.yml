@@ -1,6 +1,8 @@
 name: Maven Build
 
-on: [push]
+on:
+  push:
+    branches: [ master ]
 
 jobs:
   build:
@@ -16,7 +18,7 @@ jobs:
     - run: mvn --activate-profiles dist --no-transfer-progress package
     
     - run: mkdir modules
-    - run: mv bootstrap/target/BungeeCord.jar .
+    - run: mv bootstrap/target/BungeeCord.jar BungeeCord-vanilla!.jar
     - run: mv module/cmd-alert/target/cmd_alert.jar modules
     - run: mv module/cmd-find/target/cmd_find.jar modules
     - run: mv module/cmd-list/target/cmd_list.jar modules
@@ -28,6 +30,6 @@ jobs:
       with:
         name: build-artifacts
         path: |
-          BungeeCord.jar
+          BungeeCord-vanilla!.jar
           modules/*
         
