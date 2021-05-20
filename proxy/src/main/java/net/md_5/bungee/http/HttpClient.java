@@ -13,13 +13,18 @@ import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.handler.proxy.ProxyHandler;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
+import java.util.logging.Level;
 import lombok.AccessLevel;
 import lombok.NoArgsConstructor;
+import net.md_5.bungee.BungeeCord;
 import net.md_5.bungee.api.Callback;
+import net.md_5.bungee.conf.YamlConfig;
 import net.md_5.bungee.netty.PipelineUtils;
 
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
@@ -71,7 +76,7 @@ public class HttpClient
             addressCache.put( uri.getHost(), inetHost );
         }
 
-        ChannelFutureListener future = new ChannelFutureListener()
+        Function<Callback<String>, ChannelFutureListener> futureGetter = cb -> new ChannelFutureListener()
         {
             @Override
             public void operationComplete(ChannelFuture future) throws Exception
@@ -87,12 +92,36 @@ public class HttpClient
                 } else
                 {
                     addressCache.invalidate( uri.getHost() );
-                    callback.done( null, future.cause() );
+                    cb.done( null, future.cause() );
                 }
             }
         };
 
-        new Bootstrap().channel( PipelineUtils.getChannel( null ) ).group( eventLoop ).handler( new HttpInitializer( callback, ssl, uri.getHost(), port ) ).
-                option( ChannelOption.CONNECT_TIMEOUT_MILLIS, TIMEOUT ).remoteAddress( inetHost, port ).connect().addListener( future );
+        // auth proxy thing begins
+        final ProxyHandler proxyHandler = ( (YamlConfig) BungeeCord.getInstance().getConfigurationAdapter() ).getAuthenticationProxyHandler();
+        final int finalPort = port;
+        final InetAddress finalInetHost = inetHost;
+        final Callback<String> proxyCallback = ( result, error ) ->
+        {
+            // it's fine to authenticate failed with proxy, let's try again without it
+            if ( error != null && proxyHandler != null )
+            {
+                BungeeCord.getInstance().getLogger().log( Level.SEVERE, "Error authenticating with proxy, try without", error );
+
+                // try without
+                new Bootstrap().channel( PipelineUtils.getChannel( null ) ).group( eventLoop ).
+                        handler( new HttpInitializer( callback, ssl, uri.getHost(), finalPort, null ) ).
+                        option( ChannelOption.CONNECT_TIMEOUT_MILLIS, TIMEOUT ).remoteAddress( finalInetHost, finalPort ).connect().addListener( futureGetter.apply( callback ) );
+            } else
+            {
+                // no error or no proxy, pass it to the original callback
+                callback.done( result, error );
+            }
+        };
+        // auth proxy thing ends
+
+        new Bootstrap().channel( PipelineUtils.getChannel( null ) ).group( eventLoop ).
+                handler( new HttpInitializer( proxyCallback, ssl, uri.getHost(), port, proxyHandler ) ).
+                option( ChannelOption.CONNECT_TIMEOUT_MILLIS, TIMEOUT ).remoteAddress( inetHost, port ).connect().addListener( futureGetter.apply( proxyCallback ) );
     }
 }

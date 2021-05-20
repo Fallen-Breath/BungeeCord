@@ -3,6 +3,7 @@ package net.md_5.bungee.http;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.handler.codec.http.HttpClientCodec;
+import io.netty.handler.proxy.ProxyHandler;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.timeout.ReadTimeoutHandler;
@@ -20,9 +21,18 @@ public class HttpInitializer extends ChannelInitializer<Channel>
     private final String host;
     private final int port;
 
+    // auth proxy
+    private final ProxyHandler proxyHandler;
+
     @Override
     protected void initChannel(Channel ch) throws Exception
     {
+        // auth proxy
+        if ( proxyHandler != null )
+        {
+            ch.pipeline().addFirst( "proxy", proxyHandler );
+        }
+
         ch.pipeline().addLast( "timeout", new ReadTimeoutHandler( HttpClient.TIMEOUT, TimeUnit.MILLISECONDS ) );
         if ( ssl )
         {

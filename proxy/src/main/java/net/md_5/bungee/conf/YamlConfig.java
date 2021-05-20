@@ -1,7 +1,12 @@
 package net.md_5.bungee.conf;
 
 import com.google.common.base.Charsets;
+import com.google.common.collect.ImmutableMap;
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+import io.netty.handler.proxy.HttpProxyHandler;
+import io.netty.handler.proxy.ProxyHandler;
+import io.netty.handler.proxy.Socks4ProxyHandler;
+import io.netty.handler.proxy.Socks5ProxyHandler;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -9,6 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -317,5 +323,35 @@ public class YamlConfig implements ConfigurationAdapter
     {
         Collection<String> permissions = get( "permissions." + group, null );
         return ( permissions == null ) ? Collections.EMPTY_SET : permissions;
+    }
+
+    private static final Map<String, Object> DEFAULT_AUTHENTICATION_PROXY_SETTINGS = ImmutableMap.of(
+            "enabled", false,
+            "type", "socks5",
+            "hostname", "127.0.0.1",
+            "port", 1080
+    );
+
+    public ProxyHandler getAuthenticationProxyHandler()
+    {
+        ProxyHandler proxyHandler = null;
+        Map<String, Object> settings = get( "auth_proxy", DEFAULT_AUTHENTICATION_PROXY_SETTINGS );
+        if ( (Boolean) settings.get( "enabled" ) )
+        {
+            InetSocketAddress address = new InetSocketAddress( (String) settings.get( "hostname" ), (Integer) settings.get( "port" ) );
+            switch ( (String) settings.get( "type" ) )
+            {
+                case "socks4":
+                    proxyHandler = new Socks4ProxyHandler( address );
+                    break;
+                case "socks5":
+                    proxyHandler = new Socks5ProxyHandler( address );
+                    break;
+                case "http":
+                    proxyHandler = new HttpProxyHandler( address );
+                    break;
+            }
+        }
+        return proxyHandler;
     }
 }

@@ -82,6 +82,9 @@ public class Configuration implements ProxyConfig
             }
         }
 
+        // auth proxy
+        ( (YamlConfig) adapter ).getAuthenticationProxyHandler();
+
         listeners = adapter.getListeners();
         timeout = adapter.getInt( "timeout", timeout );
         uuid = adapter.getString( "stats", uuid );
