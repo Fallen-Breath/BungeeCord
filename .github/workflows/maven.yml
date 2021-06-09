@@ -6,7 +6,14 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [8, 11, 16]
+
+    name: Java ${{ matrix.java }}
 
     steps:
     - uses: actions/checkout@v2
@@ -16,7 +23,7 @@ jobs:
         java-version: 1.8
     - run: java -version && mvn --version
     - run: mvn --activate-profiles dist --no-transfer-progress package
-    
+
     - run: mkdir modules
     - run: mv bootstrap/target/BungeeCord.jar BungeeCord-vanilla!.jar
     - run: mv module/cmd-alert/target/cmd_alert.jar modules
@@ -25,11 +32,11 @@ jobs:
     - run: mv module/cmd-send/target/cmd_send.jar modules
     - run: mv module/cmd-server/target/cmd_server.jar modules
     - run: mv module/reconnect-yaml/target/reconnect_yaml.jar modules
-    
+
     - uses: actions/upload-artifact@v2
       with:
         name: build-artifacts
         path: |
           BungeeCord-vanilla!.jar
           modules/*
-        
+
